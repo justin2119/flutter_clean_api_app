@@ -1,0 +1,37 @@
+name: flutter_clean_api_app
+description: A production‑grade Flutter app with Clean Architecture, Supabase auth, Riverpod state management, Hive offline cache, and Style Carré UI.
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.4.0
+  dio: ^5.4.0
+  supabase_flutter: ^2.5.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.1
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.2.0
+  flutter_dotenv: ^5.0.2
+  cached_network_image: ^3.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.6
+  json_serializable: ^6.7.0
+  freezed: ^2.5.2
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Abel
+      fonts:
+        - asset: assets/fonts/Abel-Regular.ttf
+  assets:
+    - assets/images/
