@@ -1,4 +1,5 @@
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/entities/user.dart';
 import '../datasources/supabase_auth_datasource.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,23 +8,45 @@ class AuthRepositoryImpl implements AuthRepository {
 
   AuthRepositoryImpl(this._dataSource);
 
-  @override
-  Future<AuthResponse> signUp({required String email, required String password}) {
-    return _dataSource.signUp(email: email, password: password);
+  User _mapSupabaseUser(supabase.User? supabaseUser) {
+    if (supabaseUser == null) {
+      return User(id: '', email: null);
+    }
+    return User(
+      id: supabaseUser.id,
+      email: supabaseUser.email,
+      phone: supabaseUser.phone,
+      createdAt: supabaseUser.createdAt,
+      metadata: supabaseUser.userMetadata,
+    );
   }
 
   @override
-  Future<AuthResponse> signIn({required String email, required String password}) {
-    return _dataSource.signInWithPassword(email: email, password: password);
+  Future<User> signUp({required String email, required String password}) async {
+    final resp = await _dataSource.signUp(email: email, password: password);
+    if (resp.error != null) {
+      throw Exception(resp.error!.message);
+    }
+    return _mapSupabaseUser(resp.user);
   }
 
   @override
-  Future<void> signOut() {
-    return _dataSource.signOut();
+  Future<User> signIn({required String email, required String password}) async {
+    final resp = await _dataSource.signInWithPassword(email: email, password: password);
+    if (resp.error != null) {
+      throw Exception(resp.error!.message);
+    }
+    return _mapSupabaseUser(resp.user);
+  }
+
+  @override
+  Future<void> signOut() async {
+    await _dataSource.signOut();
   }
 
   @override
   User? getCurrentUser() {
-    return _dataSource.getCurrentUser();
+    final user = _dataSource.getCurrentUser();
+    return user != null ? _mapSupabaseUser(user) : null;
   }
 }
