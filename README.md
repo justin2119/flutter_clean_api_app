@@ -1,71 +1,110 @@
-# Flutter Clean API App
+# Flutter Clean API App – Documentation Technique (FR)
 
-## English
+## Introduction
 
-This repository contains a production‑grade Flutter application that follows **Clean Architecture** (Data, Domain, Presentation) with MVVM, uses **Riverpod** for state management, and includes a full authentication system (Supabase) with Dio interceptors.
+**Flutter Clean API App** est une application mobile full‑stack développée avec **Flutter** qui suit scrupuleusement les principes de **Clean Architecture** et du **Modèle‑Vue‑Vue‑Modèle (MVVM)**. Elle offre une authentification sécurisée via **Supabase**, une consommation d’API de nouvelles (NewsAPI) et un cache local **Hive** afin d’assurer une stratégie **offline‑first**. L’ensemble du projet a été pensé pour résister aux réseaux à haute latence, notamment ceux du Togo, grâce à des time‑outs de 30 s sur toutes les requêtes réseau.
 
-### Features
-- Clean Architecture (Data, Domain, Presentation) with MVVM
-- Authentication via Supabase (JWT refresh tokens, Dio interceptors)
-- Three UI screens interacting with a real REST API (NewsAPI example)
-- Offline support using **Hive** for local caching and graceful network error handling (30 s timeout)
-- Strict **Style Carré** UI aesthetic: zero border radius, background `#263238`, white text, **Abel** font, white opacity layers
-- Unit tests for repositories/use‑cases (minimum three)
-- State management with **Riverpod** (`AsyncNotifier`, `Provider`)
+---
 
-### How to run
-1. Install Flutter SDK (>=3.19) and ensure `dart` is in your PATH.
-2. Clone the repository:
+## Architecture détaillée
+
+### 1️⃣ Data Layer
+* **Datasources** – Implémentations concrètes qui interagissent avec les services externes :
+  * `SupabaseAuthDataSource` : gère les appels d’authentification Supabase avec des `Dio`/`SupabaseClient` configurés avec `connectTimeout`, `receiveTimeout` et `sendTimeout` à 30 s.
+  * `NewsApiClient` : utilise **Dio** (30 s timeout) pour récupérer les dernières actualités via **NewsAPI**.
+* **Repositories (Implémentations)** – `AuthRepositoryImpl` et `NewsRepositoryImpl` traduisent les réponses du datasource en **Domain Models**. Elles mettent également à jour le cache local Hive (`articles_box`). En cas d’échec (exception `DioException` ou perte de connexion), les méthodes retournent les données provenant du cache, garantissant la continuité de l’expérience utilisateur.
+* **Mapping** – Chaque datasource transforme les objets Supabase ou les JSON de NewsAPI en entités du domaine (`User`, `Article`).
+
+### 2️⃣ Domain Layer
+* **Entités** – `User` (identifiant, email, téléphone, date de création, métadonnées) et `Article` (titre, description, URL, image, date de publication, contenu, source). Aucun import du SDK Supabase ou d’une bibliothèque de réseau.
+* **Repositories (Interfaces)** – Contrats abstraits (`AuthRepository`, `NewsRepository`) définissant les opérations nécessaires.
+* **Use Cases** – Logique métier encapsulée :
+  * `SignInUseCase`, `SignUpUseCase`, `SignOutUseCase`
+  * `GetLatestNews`
+  Ces cas d’usage sont invoqués depuis les `AsyncNotifier` du **Presentation Layer**.
+
+### 3️⃣ Presentation Layer
+* **État** – Gestion du state via **Riverpod** : `AsyncNotifierProvider`/`AsyncNotifier` (`AuthNotifier`, `NewsNotifier`). Aucun `setState` n’est utilisé ; toute la logique repose sur des notifiers asynchrones.
+* **UI** – Écrans (`LoginScreen`, `SignUpScreen`, `HomeScreen`, `DetailScreen`) conformes au **Style Carré** :
+  * Fond `#263238`
+  * Texte blanc `#FFFFFF`
+  * Police **Abel** via `GoogleFonts.abel`
+  * Bordure nulle (`BorderRadius.zero`) sur tous les conteneurs, champs de texte et boutons.
+* **Navigation** – `AuthWrapper` route automatiquement l’utilisateur authentifié vers `HomeScreen` ou vers `LoginScreen` sinon.
+
+---
+
+## Fonctionnalités principales
+* **Authentification Supabase** : inscription, connexion, déconnexion, persistance de session.
+* **Intégration NewsAPI** : récupération des gros titres, affichage en liste, rafraîchissement manuel.
+* **Cache Hive offline‑first** : stockage persistant des articles, récupération en cas d’absence de réseau.
+* **Configuration d’environnement** : variables `SUPABASE_URL` et `SUPABASE_ANON_KEY` injectées via `--dart-define` ou `--dart-define-from-file`.
+* **Gestion des time‑outs** : toutes les requêtes réseau (Supabase, Dio) sont limitées à **30 s** pour compenser les latences élevées observées au Togo.
+
+---
+
+## Stack technique
+| Domaine | Technologie |
+|--------|--------------|
+| UI & Framework | **Flutter** (Dart) |
+| Gestion d’état | **Riverpod** (AsyncNotifier) |
+| Authentification | **Supabase SDK** |
+| Appels HTTP | **Dio** (timeout 30 s) |
+| Cache local | **Hive** (Box `articles_box`) |
+| Styling | **GoogleFonts.abel**, couleur `#263238`, texte `#FFFFFF`, bordure zéro |
+
+---
+
+## Guide d’installation & d’exécution
+1. **Cloner le dépôt**
    ```bash
    git clone https://github.com/justin2119/flutter_clean_api_app.git
    cd flutter_clean_api_app
    ```
-3. Create a Supabase project and copy the `SUPABASE_URL` and `SUPABASE_ANON_KEY` into a `.env` file (or use `flutter_dotenv`).
-4. Get a NewsAPI key and add it to the same `.env` file as `NEWS_API_KEY`.
-5. Run `flutter pub get`.
-6. Generate Hive adapters: `flutter packages pub run build_runner build`.
-7. Launch the app on a device or emulator: `flutter run`.
-
-### Tests
-Run unit tests with:
-```bash
-flutter test
-```
-
----
-
-## Français
-
-Ce dépôt contient une application Flutter **de niveau production** respectant **l’Architecture Clean** (Data, Domain, Presentation) avec le pattern MVVM, utilise **Riverpod** pour la gestion d’état, et inclut un système d’authentification complet (Supabase) avec des intercepteurs Dio.
-
-### Fonctionnalités
-- Architecture Clean (Data, Domain, Presentation) avec MVVM
-- Authentification via Supabase (tokens JWT, rafraîchissement, intercepteurs Dio)
-- Trois écrans UI interagissant avec une API REST réelle (exemple NewsAPI)
-- Support hors‑ligne grâce à **Hive** (cache local) et gestion des erreurs réseau avec un timeout de 30 s
-- Esthétique **Style Carré** stricte : aucun rayon de bordure, couleur de fond `#263238`, texte blanc, police **Abel**, calques à opacité blanche
-- Tests unitaires (au moins trois) pour les dépôts ou cas d’usage
-- Gestion d’état avec **Riverpod** (`AsyncNotifier`, `Provider`)
-
-### Comment lancer l’application
-1. Installez le SDK Flutter (>=3.19) et assurez‑vous que `dart` est dans votre PATH.
-2. Clonez le dépôt :
+2. **Créer le fichier d’environnement**
+   Copiez le modèle fourni et remplissez vos valeurs :
    ```bash
-   git clone https://github.com/justin2119/flutter_clean_api_app.git
-   cd flutter_clean_api_app
+   cp .env.example .env
+   # éditez .env avec votre URL Supabase et votre clé Anon
    ```
-3. Créez un projet Supabase et copiez `SUPABASE_URL` et `SUPABASE_ANON_KEY` dans un fichier `.env` (ou utilisez `flutter_dotenv`).
-4. Obtenez une clé API NewsAPI et ajoutez‑la dans le même fichier `.env` comme `NEWS_API_KEY`.
-5. Exécutez `flutter pub get`.
-6. Générez les adaptateurs Hive : `flutter packages pub run build_runner build`.
-7. Lancez l’application sur un appareil ou un émulateur : `flutter run`.
-
-### Tests
-Exécutez les tests unitaires avec :
-```bash
-flutter test
-```
+3. **Installer les dépendances**
+   ```bash
+   flutter pub get
+   ```
+4. **Générer les adaptateurs Hive**
+   ```bash
+   flutter packages pub run build_runner build --delete-conflicting-outputs
+   ```
+5. **Lancer l’application** (en injectant les variables) :
+   ```bash
+   flutter run \
+     --dart-define=SUPABASE_URL=$(grep SUPABASE_URL .env | cut -d'=' -f2) \
+     --dart-define=SUPABASE_ANON_KEY=$(grep SUPABASE_ANON_KEY .env | cut -d'=' -f2)
+   ```
+   Vous pouvez également créer un fichier `dart_defines.txt` et lancer :
+   ```bash
+   flutter run --dart-define-from-file=dart_defines.txt
+   ```
+6. **Construire une version release**
+   ```bash
+   flutter build apk \
+     --dart-define=SUPABASE_URL=... \
+     --dart-define=SUPABASE_ANON_KEY=...
+   ```
 
 ---
 
-*This project follows the specifications provided in the assignment image.*
+## Gestion des contraintes réseau du Togo
+Le Togo possède des connexions Internet parfois lentes et instables. Le projet répond à ces contraintes :
+* **Timeout personnalisés** : chaque appel `Dio` et chaque opération Supabase sont configurés avec un `connectTimeout`, `receiveTimeout` et `sendTimeout` de **30 seconds**.
+* **Stratégie offline‑first** : les articles sont stockés dans Hive dès la première récupération réussie. Si la connexion : est absente ou que le serveur ne répond pas dans les 30 s, l’application lit directement le cache local, garantissant ainsi une expérience fluide même en cas de perte de réseau.
+* **Graceful fallback** : les exceptions (`DioException`, `SocketException`) sont interceptées, loggées et entraînent le retour des données en cache sans interruption de l’UI.
+
+---
+
+## Licence
+Ce projet est publié sous la licence MIT. Vous êtes libre de l’utiliser, le modifier et le redistribuer.
+
+---
+
+*Bonne programmation !*
