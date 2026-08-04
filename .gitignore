@@ -1,0 +1,19 @@
+# Misc
+.DS_Store
+*.log
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+build/
+.idea/
+android/app/debug.keystore
+
+# Generated files
+generated_plugin_registrant.dart
+
+# Env files
+.env
