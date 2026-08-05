@@ -19,16 +19,14 @@ Future<void> main() async {
     authLocalStorage: SecureSupabaseLocalStorage(SecureStorageService()),
   );
 
-  // Verify environment variables
-  if (EnvConfig.supabaseUrl.isEmpty || EnvConfig.supabaseAnonKey.isEmpty) {
-    // Log a warning – in a real app you might show a UI prompt
-    debugPrint('Supabase environment variables are missing. Initialization may fail.');
-  }
+  // Verify environment variables and log warnings if missing
+  EnvConfig.validate();
 
   final appDocDir = await getApplicationDocumentsDirectory();
   Hive.init(appDocDir.path);
   Hive.registerAdapter(ArticleAdapter());
-  await Hive.openBox<Article>('articles_box');
+  // Open the Hive box that will store news articles
+  await Hive.openBox<Article>('news_articles');
 
   runApp(const ProviderScope(child: MyApp()));
 }
