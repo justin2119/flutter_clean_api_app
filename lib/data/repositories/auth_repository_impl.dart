@@ -2,7 +2,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../domain/entities/user.dart';
 import '../../core/error/failures.dart';
 import '../datasources/supabase_auth_datasource.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:fpdart/fpdart.dart';
 import 'dart:io';
 
@@ -19,7 +19,7 @@ class AuthRepositoryImpl implements AuthRepository {
       id: supabaseUser.id,
       email: supabaseUser.email,
       phone: supabaseUser.phone,
-      createdAt: supabaseUser.createdAt,
+      createdAt: DateTime.parse(supabaseUser.createdAt),
       metadata: supabaseUser.userMetadata,
     );
   }
@@ -28,12 +28,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, User>> signUp({required String email, required String password}) async {
     try {
       final resp = await _dataSource.signUp(email: email, password: password);
-      if (resp.error != null) {
-        return Left(InvalidCredentialsFailure(resp.error!.message));
-      }
       return Right(_mapSupabaseUser(resp.user));
-    } on DioException catch (e) {
-      return Left(NetworkFailure(e.message ?? 'Network error'));
+    } on supabase.AuthException catch (e) {
+      return Left(NetworkFailure(e.message));
     } on SocketException {
       return Left(NetworkFailure());
     } catch (e) {
@@ -45,12 +42,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, User>> signIn({required String email, required String password}) async {
     try {
       final resp = await _dataSource.signInWithPassword(email: email, password: password);
-      if (resp.error != null) {
-        return Left(InvalidCredentialsFailure(resp.error!.message));
-      }
       return Right(_mapSupabaseUser(resp.user));
-    } on DioException catch (e) {
-      return Left(NetworkFailure(e.message ?? 'Network error'));
+    } on supabase.AuthException catch (e) {
+      return Left(NetworkFailure(e.message));
     } on SocketException {
       return Left(NetworkFailure());
     } catch (e) {
@@ -63,8 +57,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _dataSource.signOut();
       return const Right(unit);
-    } on DioException catch (e) {
-      return Left(NetworkFailure(e.message ?? 'Network error'));
+    } on supabase.AuthException catch (e) {
+      return Left(NetworkFailure(e.message));
     } on SocketException {
       return Left(NetworkFailure());
     } catch (e) {

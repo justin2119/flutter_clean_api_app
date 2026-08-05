@@ -1,4 +1,4 @@
-import 'article.dart';
+import '../entities/article.dart';
 
 abstract class NewsRepository {
   Future<List<Article>> getLatestNews();

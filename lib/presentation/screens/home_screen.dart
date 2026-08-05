@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../domain/entities/article.dart';
 import '../../domain/usecases/get_latest_news.dart';
 import '../widgets/article_list_item.dart';
 import 'detail_screen.dart';

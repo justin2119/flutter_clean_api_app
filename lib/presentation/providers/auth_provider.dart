@@ -1,10 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/user.dart';
-import '../../core/error/failures.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/datasources/supabase_auth_datasource.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:fpdart/fpdart.dart';
 
 final authProvider = AsyncNotifierProvider<AuthNotifier, User?>(() => AuthNotifier());
@@ -14,7 +13,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
 
   @override
   Future<User?> build() async {
-    final client = Supabase.instance;
+    final client = supabase.Supabase.instance.client;
     _repo = AuthRepositoryImpl(SupabaseAuthDataSource(client));
     final result = await _repo.getCurrentUser();
     return result.fold((l) => null, (r) => r);
@@ -24,7 +23,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = const AsyncLoading();
     final result = await _repo.signIn(email: email, password: password);
     result.fold(
-      (failure) => state = AsyncError(failure),
+      (failure) => state = AsyncError(failure, StackTrace.current),
       (user) => state = AsyncData(user),
     );
   }
@@ -33,7 +32,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = const AsyncLoading();
     final result = await _repo.signUp(email: email, password: password);
     result.fold(
-      (failure) => state = AsyncError(failure),
+      (failure) => state = AsyncError(failure, StackTrace.current),
       (user) => state = AsyncData(user),
     );
   }
@@ -42,7 +41,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = const AsyncLoading();
     final result = await _repo.signOut();
     result.fold(
-      (failure) => state = AsyncError(failure),
+      (failure) => state = AsyncError(failure, StackTrace.current),
       (_) => state = const AsyncData(null),
     );
   }
