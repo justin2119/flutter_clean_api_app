@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../domain/entities/article.dart';
 import '../../core/config/env_config.dart';
+import '../../core/network/auth_interceptor.dart';
 
 class NewsApiClient {
   final Dio _dio;
@@ -13,7 +14,7 @@ class NewsApiClient {
           connectTimeout: const Duration(seconds: 30),
           receiveTimeout: const Duration(seconds: 30),
           sendTimeout: const Duration(seconds: 30),
-        )),
+        ))..interceptors.add(AuthInterceptor()),
         _baseUrl = EnvConfig.newsApiUrl.isNotEmpty ? EnvConfig.newsApiUrl : _defaultBaseUrl,
         _apiKey = EnvConfig.newsApiKey.isNotEmpty ? EnvConfig.newsApiKey : '';
 
