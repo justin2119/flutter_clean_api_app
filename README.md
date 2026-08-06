@@ -1,110 +1,143 @@
-# Flutter Clean API App – Documentation Technique (FR)
+# Flutter Clean API App
 
-## Introduction
+Application Flutter de consultation d’actualités, conçue autour d’une Clean Architecture stricte, d’un MVVM piloté par Riverpod et d’une expérience offline-first. Le projet s’appuie sur Supabase pour l’authentification, NewsAPI pour les articles, Dio pour le réseau et Hive pour la persistance locale.
 
-**Flutter Clean API App** est une application mobile full‑stack développée avec **Flutter** qui suit scrupuleusement les principes de **Clean Architecture** et du **Modèle‑Vue‑Vue‑Modèle (MVVM)**. Elle offre une authentification sécurisée via **Supabase**, une consommation d’API de nouvelles (NewsAPI) et un cache local **Hive** afin d’assurer une stratégie **offline‑first**. L’ensemble du projet a été pensé pour résister aux réseaux à haute latence, notamment ceux du Togo, grâce à des time‑outs de 30 s sur toutes les requêtes réseau.
+## Principes directeurs
 
----
+- Séparer clairement présentation, métier et infrastructure afin de limiter le couplage.
+- Exposer l’état de l’application avec Riverpod plutôt qu’avec `setState`.
+- Lire localement avant de dépendre du réseau : le cache est une capacité fonctionnelle, pas seulement une optimisation.
+- Rester utilisable sur des connexions lentes ou instables grâce aux timeouts, aux fallbacks et à des messages d’erreur compréhensibles en français.
+- Respecter sans exception la philosophie visuelle « Style Carré ».
 
-## Architecture détaillée
+## Architecture : Riverpod comme ViewModel dans une Clean Architecture
 
-### 1️⃣ Data Layer
-* **Datasources** – Implémentations concrètes qui interagissent avec les services externes :
-  * `SupabaseAuthDataSource` : gère les appels d’authentification Supabase avec des `Dio`/`SupabaseClient` configurés avec `connectTimeout`, `receiveTimeout` et `sendTimeout` à 30 s.
-  * `NewsApiClient` : utilise **Dio** (30 s timeout) pour récupérer les dernières actualités via **NewsAPI**.
-* **Repositories (Implémentations)** – `AuthRepositoryImpl` et `NewsRepositoryImpl` traduisent les réponses du datasource en **Domain Models**. Elles mettent également à jour le cache local Hive (`articles_box`). En cas d’échec (exception `DioException` ou perte de connexion), les méthodes retournent les données provenant du cache, garantissant la continuité de l’expérience utilisateur.
-* **Mapping** – Chaque datasource transforme les objets Supabase ou les JSON de NewsAPI en entités du domaine (`User`, `Article`).
+Le projet combine MVVM et Clean Architecture. Dans cette interprétation, les `AsyncNotifier` Riverpod constituent les ViewModels : ils exposent l’état observable à la Vue, déclenchent les use cases et centralisent les transitions de chargement, succès et erreur. La Vue ne connaît ni Dio, ni Hive, ni Supabase et ne contient pas de logique métier.
 
-### 2️⃣ Domain Layer
-* **Entités** – `User` (identifiant, email, téléphone, date de création, métadonnées) et `Article` (titre, description, URL, image, date de publication, contenu, source). Aucun import du SDK Supabase ou d’une bibliothèque de réseau.
-* **Repositories (Interfaces)** – Contrats abstraits (`AuthRepository`, `NewsRepository`) définissant les opérations nécessaires.
-* **Use Cases** – Logique métier encapsulée :
-  * `SignInUseCase`, `SignUpUseCase`, `SignOutUseCase`
-  * `GetLatestNews`
-  Ces cas d’usage sont invoqués depuis les `AsyncNotifier` du **Presentation Layer**.
+### Presentation layer — View et ViewModel
 
-### 3️⃣ Presentation Layer
-* **État** – Gestion du state via **Riverpod** : `AsyncNotifierProvider`/`AsyncNotifier` (`AuthNotifier`, `NewsNotifier`). Aucun `setState` n’est utilisé ; toute la logique repose sur des notifiers asynchrones.
-* **UI** – Écrans (`LoginScreen`, `SignUpScreen`, `HomeScreen`, `DetailScreen`) conformes au **Style Carré** :
-  * Fond `#263238`
-  * Texte blanc `#FFFFFF`
-  * Police **Abel** via `GoogleFonts.abel`
-  * Bordure nulle (`BorderRadius.zero`) sur tous les conteneurs, champs de texte et boutons.
-* **Navigation** – `AuthWrapper` route automatiquement l’utilisateur authentifié vers `HomeScreen` ou vers `LoginScreen` sinon.
+- Les écrans (`LoginScreen`, `SignUpScreen`, `HomeScreen`, `DetailScreen`) sont les Views. Ils rendent l’état et transmettent les intentions de l’utilisateur.
+- `AuthNotifier` et `NewsNotifier`, consommés via `AsyncNotifierProvider`, sont les ViewModels. Ils appellent les use cases, publient `AsyncLoading`, `AsyncData` ou `AsyncError`, et permettent à l’UI de rester réactive.
+- `AuthWrapper` et la configuration de navigation orchestrent l’accès aux écrans authentifiés ou publics.
+- Aucun appel direct à une API, à Hive ou à Supabase ne doit être ajouté dans un widget.
 
----
+### Domain layer — le cœur métier
 
-## Fonctionnalités principales
-* **Authentification Supabase** : inscription, connexion, déconnexion, persistance de session.
-* **Intégration NewsAPI** : récupération des gros titres, affichage en liste, rafraîchissement manuel.
-* **Cache Hive offline‑first** : stockage persistant des articles, récupération en cas d’absence de réseau.
-* **Configuration d’environnement** : variables `SUPABASE_URL` et `SUPABASE_ANON_KEY` injectées via `--dart-define` ou `--dart-define-from-file`.
-* **Gestion des time‑outs** : toutes les requêtes réseau (Supabase, Dio) sont limitées à **30 s** pour compenser les latences élevées observées au Togo.
+- Les entités (`User`, `Article`) sont indépendantes de Flutter, de Supabase, de Dio et de Hive.
+- Les contrats `AuthRepository` et `NewsRepository` sont définis comme abstractions que le domaine consomme.
+- Les use cases (`SignInUseCase`, `SignUpUseCase`, `SignOutUseCase`, `GetLatestNews`) encapsulent les règles métier et sont invoqués par les ViewModels.
+- Cette couche ne dépend que de ses propres abstractions et reste donc testable et remplaçable.
 
----
+### Data layer — implémentations et adaptateurs
 
-## Stack technique
+- Les datasources concrètes dialoguent avec Supabase et NewsAPI via leurs clients respectifs.
+- `AuthRepositoryImpl` et `NewsRepositoryImpl` implémentent les contrats du domaine, convertissent les DTO/JSON en entités et coordonnent réseau et cache.
+- Les détails de sérialisation, les adaptateurs Hive et la gestion des exceptions restent confinés à cette couche.
+
+Flux nominal : View → Riverpod ViewModel (`AsyncNotifier`) → use case → repository abstrait → implémentation → datasource réseau/cache. Le flux retour remonte des entités ou des erreurs typées jusqu’au ViewModel, qui fournit un état directement exploitable par la View.
+
+## Stratégie de cache Hive et mode offline
+
+Les articles sont persistés dans Hive dans la box nommée `news_articles`. Le modèle Hive des articles utilise explicitement `typeId: 0`; cet identifiant doit rester stable pour préserver la compatibilité des données déjà stockées. Les adaptateurs sont générés avec `build_runner`.
+
+La stratégie est local-first/offline-first :
+
+1. Le repository tente d’abord de fournir les données locales disponibles, afin que l’écran puisse s’afficher même sans connexion.
+2. Une récupération réseau réussie remplace ou actualise le contenu de `news_articles`, puis renvoie les articles à la présentation.
+3. Une absence de réseau, un timeout ou une réponse réseau inutilisable déclenche la lecture de la box existante.
+4. Si le cache contient des articles, ils sont retournés comme résultat utilisable, avec l’information permettant à l’UI d’indiquer qu’il s’agit de données hors ligne.
+5. Si réseau et cache sont tous deux indisponibles, le repository renvoie une erreur explicite plutôt que des données inventées.
+
+Les repositories utilisent le pattern `Either` de `fpdart` pour représenter le résultat : le côté gauche porte l’échec (erreur métier/data) et le côté droit porte la liste d’articles ou les données demandées. Cette convention évite de confondre une exception avec une donnée valide et rend les fallbacks déterministes : une erreur réseau peut être interceptée, le cache peut être consulté, puis le résultat local peut être renvoyé dans le côté droit si des articles existent.
+
+## Gestion des erreurs et contraintes réseau
+
+La conception est locale d’abord, avec un comportement prévisible sur les réseaux lents :
+
+- Toutes les requêtes réseau appliquent un timeout de 30 secondes (`connectTimeout`, `receiveTimeout` et `sendTimeout` lorsque le client le permet).
+- Les `SocketException` signalent les pertes de connectivité et les `DioException` couvrent les erreurs HTTP, de transport et de timeout Dio.
+- Ces exceptions sont capturées au niveau datasource/repository, converties vers le modèle d’erreur du projet et ne sont pas laissées remonter comme des crashes Flutter.
+- Pour les actualités, l’application privilégie le cache Hive après un échec réseau. L’utilisateur conserve donc ses dernières données connues.
+- Quand aucune donnée locale n’est disponible, l’échec est présenté via une snackbar en français, avec un message court et actionnable plutôt qu’une stack trace technique.
+- Les ViewModels transforment ensuite ces résultats en états Riverpod cohérents pour que la Vue distingue chargement, données fraîches, données hors ligne et erreur.
+
+## Philosophie visuelle sacrée : « Style Carré »
+
+Le Style Carré est un contrat produit et non une préférence facultative :
+
+- Rayon de bordure absolument nul partout : `BorderRadius.circular(0.0)` ou `BorderRadius.zero`; la valeur de référence est `0.0`.
+- Arrière-plan principal : `#263238`.
+- Texte primaire : `#FFFFFF`.
+- Typographie exclusivement basée sur `GoogleFonts.abel`. Aucun autre style de police ne doit être introduit pour l’interface.
+- La profondeur est créée avec des opacités et des superpositions, jamais avec des ombres : `white70` pour les éléments secondaires lisibles, `white24` pour les séparations/surfaces discrètes et `white10` pour les fonds ou couches de profondeur.
+- Les cartes, champs, boutons, dialogues et conteneurs doivent conserver des angles parfaitement droits. Ne pas ajouter de `boxShadow` ou de rayon décoratif pour simuler une élévation.
+
+Cette discipline doit être respectée dans tout nouvel écran et toute modification de composant existant.
+
+## CI/CD
+
+Le workflow `.github/workflows/flutter.yml` s’exécute sur chaque `push` vers `main` et chaque pull request ciblant `main`. Il utilise `ubuntu-latest` et les étapes suivantes :
+
+1. Checkout du dépôt avec `actions/checkout@v4`.
+2. Installation de Flutter `3.22.0` via `subosito/flutter-action@v2`, sur le channel `stable`.
+3. Installation des dépendances avec `flutter pub get`.
+4. Analyse statique avec `flutter analyze`.
+5. Exécution de la suite de tests avec `flutter test`.
+
+Une contribution n’est donc acceptable que si elle reste compatible avec Flutter 3.22.0 stable, passe l’analyse et ne casse pas les tests. Le workflow constitue la porte de validation continue du projet ; les secrets et variables de production doivent être fournis par la configuration sécurisée du pipeline, jamais committés.
+
+## Fonctionnalités et stack
+
+- Authentification, inscription et session persistante via Supabase.
+- Récupération et affichage d’actualités via NewsAPI et Dio.
+- État asynchrone avec Riverpod (`AsyncNotifier`).
+- Domaine découplé avec use cases et repositories abstraits.
+- Cache persistant Hive (`news_articles`, `typeId: 0`).
+- Sérialisation avec `json_serializable`/Freezed et génération via `build_runner`.
+- Configuration par variables `SUPABASE_URL` et `SUPABASE_ANON_KEY` injectées avec `--dart-define` ou `--dart-define-from-file`.
+
 | Domaine | Technologie |
-|--------|--------------|
-| UI & Framework | **Flutter** (Dart) |
-| Gestion d’état | **Riverpod** (AsyncNotifier) |
-| Authentification | **Supabase SDK** |
-| Appels HTTP | **Dio** (timeout 30 s) |
-| Cache local | **Hive** (Box `articles_box`) |
-| Styling | **GoogleFonts.abel**, couleur `#263238`, texte `#FFFFFF`, bordure zéro |
+|---|---|
+| Framework | Flutter / Dart |
+| Architecture | Clean Architecture + MVVM |
+| ViewModels / état | Riverpod, `AsyncNotifier` |
+| Backend/authentification | Supabase |
+| HTTP | Dio |
+| Résultats | `fpdart`, pattern `Either` |
+| Cache local | Hive, box `news_articles`, `typeId: 0` |
+| Typographie | `GoogleFonts.abel` |
+| Style | `#263238`, `#FFFFFF`, rayon `0.0`, opacités `white70`/`white24`/`white10` |
 
----
+## Installation et exécution
 
-## Guide d’installation & d’exécution
-1. **Cloner le dépôt**
-   ```bash
-   git clone https://github.com/justin2119/flutter_clean_api_app.git
-   cd flutter_clean_api_app
-   ```
-2. **Créer le fichier d’environnement**
-   Copiez le modèle fourni et remplissez vos valeurs :
-   ```bash
-   cp .env.example .env
-   # éditez .env avec votre URL Supabase et votre clé Anon
-   ```
-3. **Installer les dépendances**
-   ```bash
-   flutter pub get
-   ```
-4. **Générer les adaptateurs Hive**
-   ```bash
-   flutter packages pub run build_runner build --delete-conflicting-outputs
-   ```
-5. **Lancer l’application** (en injectant les variables) :
-   ```bash
-   flutter run \
-     --dart-define=SUPABASE_URL=$(grep SUPABASE_URL .env | cut -d'=' -f2) \
-     --dart-define=SUPABASE_ANON_KEY=$(grep SUPABASE_ANON_KEY .env | cut -d'=' -f2)
-   ```
-   Vous pouvez également créer un fichier `dart_defines.txt` et lancer :
-   ```bash
-   flutter run --dart-define-from-file=dart_defines.txt
-   ```
-6. **Construire une version release**
-   ```bash
-   flutter build apk \
-     --dart-define=SUPABASE_URL=... \
-     --dart-define=SUPABASE_ANON_KEY=...
-   ```
+```bash
+git clone https://github.com/justin2119/flutter_clean_api_app.git
+cd flutter_clean_api_app
+flutter pub get
+flutter packages pub run build_runner build --delete-conflicting-outputs
+```
 
----
+Lancer avec les variables d’environnement :
 
-## Gestion des contraintes réseau du Togo
-Le Togo possède des connexions Internet parfois lentes et instables. Le projet répond à ces contraintes :
-* **Timeout personnalisés** : chaque appel `Dio` et chaque opération Supabase sont configurés avec un `connectTimeout`, `receiveTimeout` et `sendTimeout` de **30 seconds**.
-* **Stratégie offline‑first** : les articles sont stockés dans Hive dès la première récupération réussie. Si la connexion : est absente ou que le serveur ne répond pas dans les 30 s, l’application lit directement le cache local, garantissant ainsi une expérience fluide même en cas de perte de réseau.
-* **Graceful fallback** : les exceptions (`DioException`, `SocketException`) sont interceptées, loggées et entraînent le retour des données en cache sans interruption de l’UI.
+```bash
+flutter run \\
+  --dart-define=SUPABASE_URL=... \\
+  --dart-define=SUPABASE_ANON_KEY=...
+```
 
----
+Ou utiliser un fichier de définitions :
+
+```bash
+flutter run --dart-define-from-file=dart_defines.txt
+```
+
+Avant de soumettre une modification, reproduire localement les contrôles CI :
+
+```bash
+flutter analyze
+flutter test
+```
 
 ## Licence
-Ce projet est publié sous la licence MIT. Vous êtes libre de l’utiliser, le modifier et le redistribuer.
 
----
-
-*Bonne programmation !*
+Ce projet est publié sous licence MIT.
