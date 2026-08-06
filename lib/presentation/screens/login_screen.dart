@@ -5,6 +5,7 @@ import '../../presentation/providers/auth_provider.dart';
 import 'signup_screen.dart';
 import '../widgets/custom_button.dart';
 
+// ConsumerStatefulWidget combine le cycle de vie StatefulWidget avec l'accès à Riverpod.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -12,18 +13,23 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _LoginScreenState();
 }
 
+// ConsumerState fournit ref pour lire le notifier et setState pour l'état visuel local.
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  // Chaque contrôleur conserve et expose le texte saisi par son TextField.
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  // Cet état local ne remplace pas Riverpod : il contrôle seulement le bouton de l'écran.
   bool _isLoading = false;
 
   @override
   void dispose() {
+    // Libérer les contrôleurs évite de conserver des ressources après la destruction de la route.
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
+  // Lit les valeurs saisies puis invoque la méthode exposée par le provider d'authentification.
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     await ref.read(authProvider.notifier).signIn(_emailCtrl.text, _passwordCtrl.text);
@@ -46,12 +52,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _emailCtrl,
                 decoration: InputDecoration(
                   hintText: 'Email',
-                  hintStyle: const TextStyle(color: Colors.white70),
+                  // Abel est appliquée aux textes indicatifs et aux caractères saisis.
+                  hintStyle: GoogleFonts.abel(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.white12,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide.none),
+                  // BorderRadius.zero impose le Style Carré sans arrondi implicite.
+                  border: const OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide.none),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: GoogleFonts.abel(color: Colors.white),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
@@ -59,13 +67,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _passwordCtrl,
                 decoration: InputDecoration(
                   hintText: 'Password',
-                  hintStyle: const TextStyle(color: Colors.white70),
+                  hintStyle: GoogleFonts.abel(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.white12,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide.none),
+                  border: const OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide.none),
                 ),
                 obscureText: true,
-                style: const TextStyle(color: Colors.white),
+                style: GoogleFonts.abel(color: Colors.white),
               ),
               const SizedBox(height: 24),
               _isLoading
@@ -77,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignUpScreen())),
-                child: const Text('Don\'t have an account? Sign Up', style: TextStyle(color: Colors.white70)),
+                child: Text('Don\'t have an account? Sign Up', style: GoogleFonts.abel(color: Colors.white70)),
               ),
             ],
           ),
