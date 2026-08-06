@@ -1,50 +1,64 @@
-// AsyncNotifier et AsyncNotifierProvider représentent un état asynchrone Riverpod.
+// Riverpod fournit AsyncNotifier et AsyncNotifierProvider pour gérer un état asynchrone.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Hive fournit le cache local des articles.
-import 'package:hive/hive.dart';
-// Entité métier affichée par l'application.
+// Article est le modèle métier contenu dans l'état réactif de l'écran.
 import '../../domain/entities/article.dart';
-// Contrat du dépôt utilisé par ce cas d'utilisation.
-import '../../domain/repositories/news_repository.dart';
-// Source de données distante.
+// INewsRepository est le contrat abstrait consommé par ce cas d'utilisation.
+import '../../domain/repositories/i_news_repository.dart';
+// NewsApiClient est la dépendance réseau injectée dans l'implémentation du dépôt.
 import '../../data/datasources/news_api_client.dart';
-// Implémentation concrète du dépôt.
+// NewsRepositoryImpl relie l'API et le cache Hive tout en respectant le contrat.
 import '../../data/repositories/news_repository_impl.dart';
-// Import conservé tel quel pour la gestion des appels réseau dans ce fichier.
-import 'package:dio/dio.dart';
+// Either, Left et Right permettent de traiter explicitement succès et échec.
+import 'package:fpdart/fpdart.dart';
 
-// Provider global : Riverpod crée et suit un NewsNotifier quand l'interface le demande.
-// Il expose une liste accompagnée d'états loading, data ou error.
+// Riverpod crée ce notifier à la demande et le rend observable par les widgets.
+// Le second paramètre List<Article> signifie que la donnée finale exposée est une liste.
+// AsyncNotifier ajoute automatiquement les états AsyncLoading, AsyncData et AsyncError.
 final newsNotifierProvider = AsyncNotifierProvider<NewsNotifier, List<Article>>(() => NewsNotifier());
 
 // Orchestrateur de l'état des actualités dans l'interface Flutter.
+// Les widgets peuvent écouter ce notifier et se reconstruire lorsque state change.
 class NewsNotifier extends AsyncNotifier<List<Article>> {
-  // late signifie que le dépôt sera initialisé avant sa première utilisation.
-  late final NewsRepository _repo;
+  // Le type d'interface protège le domaine contre un choix technique particulier.
+  // NewsRepositoryImpl sera injecté dans build, mais utilisé à travers INewsRepository.
+  late final INewsRepository _repo;
 
-  // build est appelé par Riverpod pour initialiser la valeur du provider.
+  // Riverpod appelle build pour préparer la valeur initiale du provider.
   @override
   Future<List<Article>> build() async {
-    // Prépare le client de l'API distante.
+    // Construit la source réseau ; ses timeouts de 30 secondes sont définis dans NewsApiClient.
+    // Ce fichier ne les remplace pas et ne les affaiblit donc pas.
     final apiClient = NewsApiClient();
-    // Ouvre la boîte locale utilisée ici comme cache.
-    final box = await Hive.openBox<Article>('articles_box');
-    // Assemble les dépendances avant de demander les données au dépôt.
-    _repo = NewsRepositoryImpl(apiClient, box);
-    return await _repo.getLatestNews();
+    // L'injection transmet uniquement le client au repository.
+    // Le repository retrouve lui-même sa boîte Hive interne : aucune boîte n'est dupliquée ici.
+    _repo = NewsRepositoryImpl(apiClient);
+    // Le dépôt renvoie Either<Failure, List<Article>>, pas directement une liste.
+    // fold reçoit d'abord la fonction Left, puis la fonction Right.
+    return await _repo.getLatestNews().fold(
+      // Left contient l'erreur métier ; on la transforme en exception pour AsyncNotifier.
+      // L'exception sera capturée par Riverpod et convertie en état AsyncError.
+      (failure) => throw Exception(failure.message),
+      // Right contient la liste valide que build doit exposer comme List<Article>.
+      (articles) => articles,
+    );
   }
 
-  // Recharge les informations et actualise l'état observé par les widgets.
+  // Recharge les actualités et met à jour l'état réactif observé par les widgets.
   Future<void> refresh() async {
-    // Informe l'interface qu'une nouvelle opération est en cours.
+    // AsyncLoading indique visuellement qu'une nouvelle requête est en cours.
     state = const AsyncLoading();
     try {
-      // Demande les dernières données au dépôt.
-      final fresh = await _repo.getLatestNews();
-      // AsyncData contient une valeur prête à afficher.
+      // Même traitement Either : fold sépare proprement Left et Right.
+      final fresh = await _repo.getLatestNews().fold(
+        // Une Failure devient une exception capturée par le catch ci-dessous.
+        (failure) => throw Exception(failure.message),
+        // En cas de Right, la liste devient la nouvelle donnée de l'interface.
+        (articles) => articles,
+      );
+      // AsyncData publie la liste réussie aux widgets abonnés.
       state = AsyncData(fresh);
     } catch (e, st) {
-      // AsyncError conserve l'erreur et sa stack trace pour le diagnostic.
+      // Toute exception issue d'un Left ou toute autre erreur devient AsyncError.
       state = AsyncError(e, st);
     }
   }
