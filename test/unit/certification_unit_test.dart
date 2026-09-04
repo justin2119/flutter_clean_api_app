@@ -1,24 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:fpdart/fpdart.dart';
+import '../../lib/core/error/failures.dart';
+import '../../lib/domain/entities/article.dart';
+import '../../lib/domain/usecases/get_latest_news.dart';
+import '../../lib/domain/repositories/i_news_repository.dart';
+class _FakeRepository implements INewsRepository { final Either<Failure, List<Article>> response; _FakeRepository(this.response); @override Future<Either<Failure, List<Article>>> getLatestNews() async => response; }
 void main() {
-  group('Certification unit suite', () {
-    test('failure mapping: network', () => expect('network', isNotEmpty));
-    test('failure mapping: cache', () => expect('cache', isNotEmpty));
-    test('failure mapping: unauthorized', () => expect(401, greaterThan(0)));
-    test('repository returns stable ordering', () {
-      expect([3, 1, 2]..sort(), [1, 2, 3]);
-    });
-    test('repository cache hit avoids duplicate values', () {
-      expect({...[1, 1, 2]}.length, 2);
-    });
-    test('usecase trims a search query', () {
-      expect('  flutter  '.trim(), 'flutter');
-    });
-    test('usecase rejects an empty query', () => expect(''.trim(), isEmpty));
-    test('bookmark toggles on', () => expect(!false, isTrue));
-    test('bookmark toggles off', () => expect(!true, isFalse));
-    test('language provider supports French and English', () {
-      expect({'fr', 'en'}, containsAll(<String>['fr', 'en']));
-    });
-  });
+  test('domain entity maps API-shaped JSON', () { final article = Article.fromJson({'title': 'Title', 'url': 'https://example.com', 'source': {'name': 'Source'}, 'publishedAt': '2026-01-02T03:04:05Z'}); expect(article.source, 'Source'); expect(article.publishedAt, isNotNull); });
+  test('use case preserves a data failure', () async { final result = await GetLatestNews(_FakeRepository(left(const NetworkFailure('offline'))))(); expect(result.isLeft(), isTrue); });
+  test('use case returns cached/domain data', () async { final article = Article(title: 'Cached', url: 'https://example.com'); final result = await GetLatestNews(_FakeRepository(right([article])))(); expect(result.getOrElse((_) => const []).single.title, 'Cached'); });
 }
