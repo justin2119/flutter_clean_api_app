@@ -1,10 +1,24 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:flutter_clean_api_app/main.dart' as app;
 
 void main() {
-  testWidgets('news feed to article detail flow contract', (tester) async {
-    expect(true, isTrue);
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('app starts with five-screen navigation', (tester) async {
+    app.main();
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byIcon(Icons.home), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
   });
-  testWidgets('bookmark and offline reading flow contract', (tester) async {
-    expect(true, isTrue);
+
+  testWidgets('navigation reaches settings screen', (tester) async {
+    app.main();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    expect(find.text('Paramètres'), findsOneWidget);
   });
 }
