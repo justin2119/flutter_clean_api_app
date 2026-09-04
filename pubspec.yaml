@@ -1,5 +1,5 @@
-name: ecommerce_project
-description: A new Flutter project.
+name: flutter_clean_api_app
+description: A Clean Architecture Flutter application.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -24,6 +24,8 @@ dependencies:
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^3.0.0
   build_runner: ^2.4.9
