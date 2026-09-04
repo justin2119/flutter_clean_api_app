@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
-class SettingsScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/locale_provider.dart';
+
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-  @override State<SettingsScreen> createState() => _SettingsScreenState();
-}
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool french = true;
+
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Settings')), body: SwitchListTile(title: const Text('Français / English'), value: french, onChanged: (value) => setState(() => french = value), secondary: const Icon(Icons.language), activeColor: const Color(0xFF4CAF50),),);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+    final isFrench = locale.languageCode == 'fr';
+    return Scaffold(
+      appBar: AppBar(title: Text(isFrench ? 'Paramètres' : 'Settings')),
+      body: SwitchListTile(
+        title: Text(isFrench ? 'Français / English' : 'English / Français'),
+        value: isFrench,
+        onChanged: (_) => ref.read(localeProvider.notifier).toggle(),
+        secondary: const Semantics(
+          label: 'Language',
+          child: Icon(Icons.language),
+        ),
+        activeColor: const Color(0xFF4CAF50),
+      ),
+    );
+  }
 }
