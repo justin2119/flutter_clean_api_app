@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:ecommerce_project/main.dart' as app;
+import 'package:flutter_clean_api_app/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -8,6 +8,6 @@ void main() {
   testWidgets('application starts and exposes the settings navigation', (tester) async {
     app.main();
     await tester.pumpAndSettle();
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Paramètres'), findsOneWidget);
   });
 }
