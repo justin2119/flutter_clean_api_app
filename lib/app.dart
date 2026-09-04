@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/localization/app_localizations.dart';
+import 'presentation/providers/locale_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/bookmarks_screen.dart';
 import 'presentation/screens/search_screen.dart';
@@ -12,6 +13,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
         title: 'Flutter Clean API App',
+        locale: ref.watch(localeProvider),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: const [AppLocalizationsDelegate()],
         theme: ThemeData(
