@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fpdart/fpdart.dart';
+import '../../core/error/failures.dart';
 import '../../domain/entities/article.dart';
 import '../../domain/repositories/news_repository.dart';
 import '../../data/datasources/news_api_client.dart';
@@ -10,11 +12,11 @@ class _ApiNewsRepository implements NewsRepository {
   final NewsApiClient client;
   _ApiNewsRepository(this.client);
   @override
-  Future<NewsResult> getLatestNews() async {
+  Future<Either<Failure, List<Article>>> getLatestNews() async {
     try {
       return Right(await client.fetchTopHeadlines());
     } catch (e) {
-      return Left(NetworkFailure(e.toString()));
+      return Left(NetworkFailure([e.toString()]));
     }
   }
 }
