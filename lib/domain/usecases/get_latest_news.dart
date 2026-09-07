@@ -7,6 +7,7 @@ import '../repositories/news_repository.dart';
 class GetLatestNews implements UseCase<List<Article>, NoParams> {
   final NewsRepository repository;
   GetLatestNews(this.repository);
+
   @override
-  Future<Either<Failure, List<Article>>> call(NoParams params) => repository.getLatestNews();
+  Future<Either<Failure, List<Article>>> call([NoParams? params]) => repository.getLatestNews();
 }

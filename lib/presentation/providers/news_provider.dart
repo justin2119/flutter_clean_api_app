@@ -1,14 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/article.dart';
-import '../../domain/repositories/i_news_repository.dart';
+import '../../domain/repositories/news_repository.dart';
 import '../../data/datasources/news_api_client.dart';
-import '../../data/repositories/news_repository_impl.dart';
 
-final newsRepositoryProvider = Provider<INewsRepository>((ref) => NewsRepositoryImpl(NewsApiClient()));
+final newsRepositoryProvider = Provider<NewsRepository>((ref) => _ApiNewsRepository(NewsApiClient()));
 final newsNotifierProvider = AsyncNotifierProvider<NewsNotifier, List<Article>>(NewsNotifier.new);
 
+class _ApiNewsRepository implements NewsRepository {
+  final NewsApiClient client;
+  _ApiNewsRepository(this.client);
+  @override
+  Future<NewsResult> getLatestNews() async {
+    try {
+      return Right(await client.fetchTopHeadlines());
+    } catch (e) {
+      return Left(NetworkFailure(e.toString()));
+    }
+  }
+}
+
 class NewsNotifier extends AsyncNotifier<List<Article>> {
-  late INewsRepository _repo;
+  late NewsRepository _repo;
   int page = 0;
   bool hasMore = true;
   bool isLoadingMore = false;
@@ -23,7 +35,7 @@ class NewsNotifier extends AsyncNotifier<List<Article>> {
 
   Future<List<Article>> _fetchPage() async {
     final result = await _repo.getLatestNews();
-    return result.fold((failure) => throw StateError(failure.message), (items) {
+    return result.fold((failure) => throw StateError(failure.toString()), (items) {
       final current = state.valueOrNull ?? <Article>[];
       final existing = current.map((article) => article.url).toSet();
       final fresh = items.where((article) => !existing.contains(article.url)).toList();
@@ -46,7 +58,7 @@ class NewsNotifier extends AsyncNotifier<List<Article>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final result = await _repo.getLatestNews();
-      return result.fold((failure) => throw StateError(failure.message), (items) {
+      return result.fold((failure) => throw StateError(failure.toString()), (items) {
         page = 1;
         return items;
       });
