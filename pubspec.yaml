@@ -10,13 +10,11 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.5.1
+  equatable: ^2.0.5
   shared_preferences: ^2.2.3
   google_fonts: ^6.2.1
   go_router: ^14.2.0
   path_provider: ^2.1.4
-  json_annotation: ^4.9.0
-  freezed_annotation: ^2.4.4
-  supabase_flutter: ^2.6.2
   dio: ^5.4.3
   fpdart: ^1.1.0
   hive: ^2.2.3
@@ -30,10 +28,6 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  build_runner: ^2.4.9
-  json_serializable: ^6.8.0
-  freezed: ^2.5.2
-  hive_generator: ^2.0.0
   mocktail: ^1.0.0
 flutter:
   uses-material-design: true
