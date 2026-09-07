@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/localization/app_localizations.dart';
+import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/locale_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/bookmarks_screen.dart';
 import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/search_screen.dart';
 import 'presentation/screens/settings_screen.dart';
 
@@ -13,15 +15,35 @@ class MyApp extends ConsumerWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
-    title: 'Flutter Clean API App', locale: ref.watch(localeProvider), themeMode: ref.watch(themeModeProvider),
-    supportedLocales: AppLocalizations.supportedLocales, localizationsDelegates: const [AppLocalizationsDelegate()],
-    theme: _theme(Brightness.light), darkTheme: _theme(Brightness.dark), home: const MainNavigation(),
-  );
+        title: 'Flutter Clean API App', locale: ref.watch(localeProvider), themeMode: ref.watch(themeModeProvider),
+        supportedLocales: AppLocalizations.supportedLocales, localizationsDelegates: const [AppLocalizationsDelegate()],
+        theme: _theme(Brightness.light), darkTheme: _theme(Brightness.dark), home: const AuthGate(),
+      );
   static ThemeData _theme(Brightness brightness) => ThemeData(
-    brightness: brightness, useMaterial3: true, scaffoldBackgroundColor: const Color(0xFF263238),
-    textTheme: GoogleFonts.abelTextTheme(), cardTheme: const CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
-    appBarTheme: const AppBarTheme(elevation: 0, backgroundColor: Color(0xFF37474F)),
-  );
+        brightness: brightness, useMaterial3: true, scaffoldBackgroundColor: const Color(0xFF263238),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4CAF50), brightness: brightness),
+        textTheme: GoogleFonts.abelTextTheme(), cardTheme: const CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
+        appBarTheme: const AppBarTheme(elevation: 0, backgroundColor: Color(0xFF37474F)),
+      );
+}
+
+class AuthGate extends ConsumerWidget {
+  const AuthGate({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authNotifierProvider);
+    return auth.when(
+      loading: () => const _AuthLoading(),
+      error: (_, __) => const LoginScreen(),
+      data: (user) => user == null ? const LoginScreen() : const MainNavigation(),
+    );
+  }
+}
+
+class _AuthLoading extends StatelessWidget {
+  const _AuthLoading();
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50))));
 }
 
 class MainNavigation extends StatefulWidget { const MainNavigation({super.key}); @override State<MainNavigation> createState() => _MainNavigationState(); }
